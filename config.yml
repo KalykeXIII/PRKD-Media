@@ -16,8 +16,8 @@ params:
 
 languages:
   en:
-    title: Kalyke
-    subtitle: Intelligent Shitposting
+    title: PRKD Media
+    subtitle: Fun, Free, First Available
     keywords: ''
     menuMore: More
     writtenBy: Written by
@@ -30,7 +30,7 @@ languages:
 
     params:
       logo:
-        logoText: kalyke
+        logoText: PRKD Media
         logoHomeLink: /
 
 
@@ -39,10 +39,9 @@ languages:
       - identifier: about
         name: About
         url: /about
-      - identifier: github
-        name: Github
-        url: 'https://github.com/KalykeXIII'
-      - identifier: linkedin
-        name: LinkedIn
-        url: 'https://www.linkedin.com/in/kyle-herbertson-43b87219b/'
-
+      - identifier: projects
+        name: Projects
+        url: /projects
+      - identifier: contact
+        name: Contact
+        url: /contact

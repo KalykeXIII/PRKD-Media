@@ -1,2 +1,2 @@
-# HugoBlog
-Repository that is home to my personal blog made using Hugo and Markdown
+# PRKD Meida
+Home of fun, free and first available disc golf content in Australia. Covering tournaments around the country originating in Melbourne.
