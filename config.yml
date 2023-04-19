@@ -11,8 +11,6 @@ params:
   defaultTheme: dark
   # if you set this to 0, only submenu trigger will be visible
   showMenuItems: 4
-  # Enable to show reading time in minutes for posts
-  showReadingTime: true
 
 languages:
   en:
@@ -39,9 +37,6 @@ languages:
       - identifier: about
         name: About
         url: /about
-      - identifier: projects
-        name: Projects
-        url: /projects
       - identifier: contact
         name: Contact
         url: /contact
