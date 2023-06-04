@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Golf Scores</title>
+    <script>
+function filterPlayers() {
+    var input = document.getElementById("search-input").value.toLowerCase();
+    var players = document.getElementsByClassName("player");
+    var dropdown = document.getElementById("search-dropdown");
+    var dropdownHTML = "";
+    var shownPlayers = [];
+
+    Array.from(players).forEach(function(player) {
+        var name = player.getElementsByClassName("player-name")[0].innerText.toLowerCase();
+        if (player.style.display !== "none") {
+            shownPlayers.push(name);
+        }
+    });
+
+    Array.from(players).forEach(function(player) {
+        var name = player.getElementsByClassName("player-name")[0].innerText.toLowerCase();
+        if (!shownPlayers.includes(name)) {
+            if (name.includes(input)) {
+                dropdownHTML += "<option value='" + name + "'>" + name + "</option>";
+            }
+            player.style.display = "none";
+        }
+    });
+
+    dropdown.innerHTML = dropdownHTML;
+
+    var searchInput = document.getElementById("search-input");
+    searchInput.addEventListener("change", function() {
+        var selectedPlayer = searchInput.value.toLowerCase();
+        Array.from(players).forEach(function(player) {
+            var name = player.getElementsByClassName("player-name")[0].innerText.toLowerCase();
+            if (name === selectedPlayer) {
+                player.style.display = "block";
+            }
+        });
+    });
+}
+
+
+        function removePlayer(playerId) {
+            var player = document.getElementById(playerId);
+            player.style.display = 'none';
+        }
+    </script>
+</head>
+<body>
+    <h1>Vic Open Scores</h1>
+
+    <input type="text" id="search-input" placeholder="Search players" onkeyup="filterPlayers()" list="search-dropdown">
+    <datalist id="search-dropdown"></datalist>  
+
+    <ul id="player-list">
+        {{ range .Site.Data.scores.players }}
+        <li class="player" id="{{ .name }}">
+            <span class="player-name">{{ .name }}</span>
+            <span class="player-score">{{ .score }}</span>
+            <button onclick="removePlayer('{{ .name }}')">Remove</button>
+        </li>
+        {{ end }}
+    </ul>
+
+    <table>
+        <thead>
+          <tr>
+            <th>Player</th>
+            {{ range .Site.Data.scores.holes}}
+                <th>{{ .name }}</td>
+            {{ end }}
+            <!-- Add more hole columns as needed -->
+          </tr>
+        </thead>
+        <tbody>
+          {{ range .Site.Data.scores.players }}
+          <tr>
+            <td>{{ .name }}</td>
+            <td>{{ .holes.Hole1 }}</td>
+            <!-- Add more cells for each hole as needed -->
+          </tr>
+          {{ end }}
+        </tbody>
+      </table>
+      
+</body>
+</html>

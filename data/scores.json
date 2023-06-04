@@ -1,0 +1,54 @@
+{
+    "players": [
+      {
+        "name": "Jade Brady",
+        "score": 72,
+        "holes": {
+          "Hole1": 3,
+          "Hole2": 2,
+          "Hole3": 3
+        }
+      },
+      {
+        "name": "Patrick Robinson",
+        "score": 68,
+        "holes": {
+          "Hole1": 3,
+          "Hole2": 2,
+          "Hole3": 3
+        }
+      },
+      {
+        "name": "Christopher Finn",
+        "score": 76,
+        "holes": {
+          "Hole1": 3,
+          "Hole2": 2,
+          "Hole3": 3
+        }
+      }
+    ],
+    "holes": [
+      {
+        "name": "Hole 1",
+        "par": 3,
+        "distance": 122
+      },
+      {
+        "name": "Hole 1",
+        "par": 3,
+        "distance": 122
+      },
+      {
+        "name": "Hole 1",
+        "par": 3,
+        "distance": 122
+      },
+      {
+        "name": "Hole 1",
+        "par": 3,
+        "distance": 122
+      }
+    ]
+  }
+  
