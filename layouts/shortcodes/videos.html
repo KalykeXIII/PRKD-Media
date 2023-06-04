@@ -1,18 +1,23 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>All Videos</title>
+    <title>PRKD MEDIA</title>
+    <link rel="stylesheet" href="/css/main.css">
 </head>
 <body>
-    <h1>All Videos</h1>
+    <h1>Check out our Latest Videos</h1>
 
-    <ul>
-        {{ range .Site.Data.videos }}
-        <!-- Create a template to show these nicer than just a link using EMBEDS -->
-        <li>
-            <a href="{{ .link }}">{{ .title }}</a>
-        </li>
-        {{ end }}
-    </ul>
+    <div class="carousel-container">
+        <div class="carousel-slides">
+            {{ range .Site.Data.videos }}
+                <iframe type="text/html" src="{{ .link }}" allowfullscreen></iframe>
+            {{ end }}
+        </div>
+    </div>
+      
+    <button class="prev-button">Previous</button>
+    <button class="next-button">Next</button>
+      
 </body>
+<script src="/js/main.js"></script>
 </html>

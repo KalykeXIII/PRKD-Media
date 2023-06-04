@@ -2,3 +2,5 @@
 title: Home
 ---
 {{< videos >}}
+
+<!-- {{< scoreboard >}} -->
