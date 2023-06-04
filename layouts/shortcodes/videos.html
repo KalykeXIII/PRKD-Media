@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>All Videos</title>
+</head>
+<body>
+    <h1>All Videos</h1>
+
+    <ul>
+        {{ range .Site.Data.videos }}
+        <!-- Create a template to show these nicer than just a link using EMBEDS -->
+        <li>
+            <a href="{{ .link }}">{{ .title }}</a>
+        </li>
+        {{ end }}
+    </ul>
+</body>
+</html>
