@@ -2,6 +2,7 @@
 # It takes event id and division as input
 import re
 import sys
+import json
 import pandas as pd
 from operator import add
 from selenium import webdriver
@@ -11,19 +12,51 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
+from webdriver_manager.chrome import ChromeDriverManager
+
 
 score_indexing = {'Birdie+': 0, 'Birdie': 1, 'Par': 2, 'Bogey': 3, 'Bogey+': 4}
 
-def get_div_text(lst, to=None):
+class PDGAScoreProcessor:
+    def __init__(self, event_id):
+        # Get the details of the PDGA page for the event
+        scores_contents = get_html_body('https://www.pdga.com/apps/tournament/live/event?view=Scores&eventId={}&round=1&division=All'.format(event_id))
+        # From here we want to get all of the relevant details
+        # - how many rounds
+        # - which divisions
+        self.all_rounds = get_div_text(scores_contents.find_all('div', class_="base-control-text"))
+        # Get a list of all the divisions at the event
+        self.all_divisions = get_div_text(scores_contents.find_all('a', class_="dropdown-item"), field='data-division')
+
+        # From this we store all of the pages for each round for each division both scores and stats as a JSON lookup
+        # Key = division+round+['Scores'/'Stats']
+        self.pages = {}
+
+        for round in range(len(self.all_rounds)):
+            for division in self.all_divisions:
+                # Query the page and store the resulting object in the lookup
+                try:
+                    self.pages[division + str(round) + 'Scores'] = get_html_body('https://www.pdga.com/apps/tournament/live/event?view=Scores&eventId={}&round={}&division={}'.format(event_id, round, division))
+                    self.pages[division + str(round) + 'Stats'] = get_html_body('https://www.pdga.com/apps/tournament/live/event?view=Stats&eventId={}&round={}&division={}'.format(event_id, round, division))
+                except:
+                    pass
+        # Dump it to a JSON object
+
+
+def get_div_text(lst, to=None, field=None):
     new_list = []
-    for i in range(len(lst)):
-        if to == 'int':
-            if lst[i].text == ' E ':
-                new_list.append(0)
+    if field:
+        for i in range(len(lst)):
+            new_list.append(lst[i][field])
+    else:
+        for i in range(len(lst)):
+            if to == 'int':
+                if lst[i].text == ' E ':
+                    new_list.append(0)
+                else:
+                    new_list.append(int(lst[i].text))
             else:
-                new_list.append(int(lst[i].text))
-        else:
-            new_list.append(lst[i].text)
+                new_list.append(lst[i].text)
     return new_list
 
 def get_html_body(url):
@@ -31,9 +64,8 @@ def get_html_body(url):
     chrome_options = Options()
     chrome_options.add_argument('--headless')  # Run the browser in headless mode (without a GUI)
     # Set up the Chrome driver service
-    chrome_service = Service('C:\\Users\\Kalyke\\Downloads\\chromedriver_win32 (1)\\chromedriver.exe')
     # Start the Chrome driver
-    driver = webdriver.Chrome(service=chrome_service, options=chrome_options)
+    driver = webdriver.Chrome(ChromeDriverManager().install(), options=chrome_options)
     # Load the URL in the browser
     driver.get(url)
     # Wait for the page to fully load (by waiting for the body element to be present)
@@ -68,7 +100,7 @@ def hole_difficulty_rankings(hole_details):
     ordered_holes = sorted(score_to_par, key=lambda x: x[1], reverse=True)
     return ordered_holes
 
-def get_scoreboard(round):
+def get_scoreboard(eventID, division, round):
     # TODO: In rounds that are not the first there is a Total column as well as a Round column
 
     # Retrieve the main body object that we will use for all subsequent queries
@@ -135,22 +167,31 @@ def get_partial_scoreboard(full_round_scoreboard, hole):
     starting_scores['Partial Score'] = 0
     # For every hole up until hole given as input alter the partial scores
     cols = full_round_scoreboard.columns
+    #
+    hole_score_df = pd.DataFrame()
     for i in range(hole):
         # Get the par for the hole
         par = int(cols[4 + i])
         hole_scores = pd.DataFrame(full_round_scoreboard.iloc[:, 4 + i])
         scores_to_par = hole_scores - par
         starting_scores['Partial Score'] = starting_scores['Partial Score'] + scores_to_par.iloc[:,0]
+        # Create a new DF for the scores_to_par
+        hole_score_df['Hole' + str(i + 1)] = scores_to_par
     # Create a new column with the starting score and partial score
     starting_scores['Current Score'] = starting_scores['Starting Score'] + starting_scores['Partial Score']
+    # Add the hole scores list for the holes selected (for now front 0 or back nine)
+    if hole == 9:
+        starting_scores['Hole Scores'] = hole_score_df[:].values.tolist()
+    elif hole == 18:
+        starting_scores['Hole Scores'] = hole_score_df[:].values.tolist()
     # Take the subset of the leaderboard that is relevant
-    starting_scores = starting_scores[['Name', 'Current Score', 'Partial Score']]
+    starting_scores = starting_scores[['Name', 'Current Score', 'Partial Score', 'Hole Scores']]
     starting_scores['Position'] = starting_scores['Current Score'].rank(method='min').astype(int)
     starting_scores = starting_scores.sort_values(by=['Position'])
     return starting_scores
 
 
-def get_scoring_distribution(eventID, division, rounds):
+def get_stats_for_multiple_rounds(eventID, division, rounds):
     # Each individual round is stored
     all_stats = []
     # Just one set of hole with the details and cumulative scoring avg and actual scores
@@ -202,18 +243,136 @@ def get_scoring_distribution(eventID, division, rounds):
         all_stats.append(round_stats)
     return all_stats, cumulative_stats
 
+def get_stats_for_round(event_id, division, round):
+    round_stats = []
+    # Retrieve the main body object that we will use for all subsequent queries
+    scores_contents = get_html_body('https://www.pdga.com/apps/tournament/live/event?eventId={}&division={}&view=Scores&round={}'.format(event_id, division, str(round)))
+    stats_contents = get_html_body('https://www.pdga.com/apps/tournament/live/event?eventId={}&division={}&view=Stats&round={}'.format(event_id, division, str(round)))
+    # From this calculate the number of holes played in this round
+    holes_played = len(stats_contents.find_all("div", {"class": "table-row"}))
+    # Also retrieve the number of players in the division
+    # TODO: Deal with DNFs
+    total_players = len(scores_contents.find_all("div", {"class": "table-row"}))
+    # TODO: Also calculate ratings for each score from the scores page
+    # For each hole retrieve all necessary details:
+    # - Hole Distance
+    # - Hole Par
+    # - Hole Average (not related to par)
+    # - The scoring distribution (eagle or better, birdie, par, bogey, double bogey or worse) -> as a percentage
+    # Each hole has 6 cells, so we iterate through in intervals of 6
+    hole_details = stats_contents.find_all('div', class_="cell-wrapper")
+    for i in range(holes_played):
+        hole_name = hole_details[6*i].text
+        hole_distance = int(hole_details[6*i + 1].text)
+        hole_par = int(hole_details[6*i + 2].text)
+        hole_average = float(hole_details[6*i + 3].text)
+        # These are in the titles of the 5th element which we can use regex for
+        score_names = re.findall(r'title\=\"([^\"]+)\"', str(hole_details[6*i + 5]))
+        # Convert these percentages back to whole numbers using field size
+        # While doing so make a more predictable array of length 5 also
+        hole_scores = [0, 0, 0, 0, 0]
+        for score in range(len(score_names)):
+            # Get the actual percentage out of the score string
+            score_name = re.findall(r'([^\:]+)', score_names[score])
+            score_pct = re.findall(r'(\d+)%', score_names[score])
+            actual_scores = int(((int(score_pct[0]) / 100) * total_players) + 0.5)
+            hole_scores[score_indexing[score_name[0]]] = actual_scores
+        
+        new_round = [hole_name, hole_distance, hole_par, hole_average, hole_scores]
+        round_stats.append(new_round)
+    return round_stats
+
+
+def get_all_scoring_distributions(eventID):
+    # Desired output is a DataFrame with the following structure
+    # Division | Round | Hole | Average | Birdie+ | Birdie | Par | Bogey | Bogey+ 
+    desired_columns = ['Division', 'Round', 'Hole', 'Average', 'Birdie+', 'Birdie', 'Par', 'Bogey', 'Bogey+'] 
+    # Ignore difficulty as that can be added later given difficulty can be split for the division for the round...
+    all_score_details = pd.DataFrame(columns=desired_columns)
+    # Determine how many rounds there are
+    stats_contents = get_html_body('https://www.pdga.com/apps/tournament/live/event?eventId={}&division=All&view=Stats&round={}'.format(eventID, 1))
+    rounds = stats_contents.find_all('div', class_="base-control-text")
+    # Get a list of all the divisions at the event
+    divisions = stats_contents.find_all('a', class_="dropdown-item")
+    for round in range(len(rounds)):
+        for div in divisions:
+            print(div['data-division'])
+            actual_div = div['data-division']
+            # For each division, and each round retrieve the stats and add them to this frame
+            if actual_div != 'All':
+                print(get_stats_for_round(eventID, actual_div, round))
+    pass
+
+def get_hole_details(event_id, division, round):
+    stats_contents = get_html_body('https://www.pdga.com/apps/tournament/live/event?eventId={}&division={}&view=Stats&round={}'.format(event_id, division, str(round)))
+    holes_played = len(stats_contents.find_all("div", {"class": "table-row"}))
+    hole_details = stats_contents.find_all('div', class_="cell-wrapper")
+    holes = []
+    for i in range(holes_played):
+        hole_name = hole_details[6*i].text
+        hole_distance = int(hole_details[6*i + 1].text)
+        hole_par = int(hole_details[6*i + 2].text)
+        holes.append({'name': hole_name, 'par': hole_par, 'distance': hole_distance})
+    return holes
+
+def get_player_details(event_id, division, round):
+    pass
+
+def json_generator(event_id, division):
+    # Rounds [Holes, Players] -> this is the initial format
+    # I want this to take the event ID as input and generate a JSON object including n sub objects (n being the number of rounds) each also containing 2 sub objects
+    # A Players Object -> storing the name, hole scores, round score and total score for each player
+    # And a Holes Object -> storing the name of the hole, the par, the distance, the scoring details (array of 5) and the hole avg
+    overall_object = {}
+
+    # Determine the number of rounds and the list of all divisions
+    stats_contents = get_html_body('https://www.pdga.com/apps/tournament/live/event?eventId={}&division=All&view=Stats&round={}'.format(eventID, 1))
+    rounds = stats_contents.find_all('div', class_="base-control-text")
+
+    # Get and write the hole details
+    for round_num in range(len(rounds)):
+        # Create the 'round' object
+        round = {'players': []}
+        # Get the hole details for each round
+        holes = get_hole_details(event_id, division, round_num + 1)
+        round['holes'] = holes
+        # Get the player objects -> returns a list of json objects for each player in the given division -> broken up into name, starting_score, final_score, round_score, rating?, hole_scores []
+        players = get_player_details(event_id, division, round_num + 1)
+
+
+        # Append everything to the overall object
+        overall_object['round' + str(round_num + 1)] = round
+
+    print(overall_object)
+    pass
+
+def davinci_json(leaderboard_object):
+    # Take a scoreboard object and convert it to a JSON object for Davinci to use
+    leaderboard_json = list()
+    for i, row in leaderboard_object.iterrows():
+        player_row =[str(row['Position']), row['Name'], row['Partial Score'] if row['Partial Score'] < 0 else 'E' if row['Partial Score'] == 0 else '+' + str(row['Partial Score']), row['Current Score'] if row['Current Score'] < 0 else 'E' if row['Current Score'] == 0 else '+' + str(row['Current Score']), row['Hole Scores']]
+        leaderboard_json.append(player_row)
+    return leaderboard_json
+
 
 if __name__ == "__main__":
     eventID = sys.argv[1]
     division = sys.argv[2]
     round_num = sys.argv[3]
-    # round_stats, overall_stats = get_scoring_distribution(eventID, division, 4)
+    hole = sys.argv[4]
+
+    # json_generator(eventID, division)
+
+    # c = PDGAScoreProcessor(eventID)
+    # print(c.pages)
+
+    # get_all_scoring_distributions(eventID)
+    # round_stats, overall_stats = get_scoring_distribution(eventID, division, 2)
     # print(round_stats)
     # print("\n")
     # print(overall_stats)
     # difficulty = hole_difficulty_rankings(overall_stats[-1])
     # print(difficulty)
-    scores = get_scoreboard(int(round_num))
-    partial_scores = get_partial_scoreboard(scores, 9)
-    print(scores)
-    print(partial_scores)
+    scores = get_scoreboard(eventID, division, int(round_num))
+    partial_scores = get_partial_scoreboard(scores, int(hole))
+    print(davinci_json(partial_scores))
