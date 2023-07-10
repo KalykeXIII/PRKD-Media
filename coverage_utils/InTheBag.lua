@@ -1,0 +1,1 @@
+local bag_object = {{'1', {}, {}, {}}}

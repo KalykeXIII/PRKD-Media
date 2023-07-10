@@ -63,9 +63,10 @@ def get_html_body(url):
     # Set up the Chrome driver options
     chrome_options = Options()
     chrome_options.add_argument('--headless')  # Run the browser in headless mode (without a GUI)
+    service = Service(executable_path=ChromeDriverManager().install())
     # Set up the Chrome driver service
     # Start the Chrome driver
-    driver = webdriver.Chrome(ChromeDriverManager().install(), options=chrome_options)
+    driver = webdriver.Chrome(service=service, options=chrome_options)
     # Load the URL in the browser
     driver.get(url)
     # Wait for the page to fully load (by waiting for the body element to be present)
@@ -145,7 +146,7 @@ def get_scoreboard(eventID, division, round):
         leaderboard.loc[row] = new_row
     # Calculate each rows score to par
     # Calculate the score for each player for the round in raw strokes
-    leaderboard['Total'] = leaderboard.sum(axis=1)
+    leaderboard['Total'] = leaderboard.sum(axis=1, numeric_only=True)
     # Convert relative to par
     leaderboard['Round Score'] = leaderboard['Total'] - int(course_par)
     # If the round is round one the round score is the total score
@@ -368,8 +369,8 @@ if __name__ == "__main__":
 
     # get_all_scoring_distributions(eventID)
     # round_stats, overall_stats = get_scoring_distribution(eventID, division, 2)
-    # print(round_stats)
-    # print("\n")
+    # # print(round_stats)
+    # # print("\n")
     # print(overall_stats)
     # difficulty = hole_difficulty_rankings(overall_stats[-1])
     # print(difficulty)
