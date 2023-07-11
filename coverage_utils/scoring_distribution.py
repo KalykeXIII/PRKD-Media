@@ -183,12 +183,17 @@ def get_partial_scoreboard(full_round_scoreboard, hole):
     # Add the hole scores list for the holes selected (for now front 0 or back nine)
     if hole == 9:
         starting_scores['Hole Scores'] = hole_score_df[:].values.tolist()
+        starting_scores = starting_scores[['Name', 'Current Score', 'Partial Score', 'Hole Scores']]
     elif hole == 18:
         starting_scores['Hole Scores'] = hole_score_df[:].values.tolist()
+        starting_scores = starting_scores[['Name', 'Current Score', 'Partial Score', 'Hole Scores']]
     # Take the subset of the leaderboard that is relevant
-    starting_scores = starting_scores[['Name', 'Current Score', 'Partial Score', 'Hole Scores']]
+    else:
+        starting_scores = starting_scores[['Name', 'Current Score', 'Partial Score']]
     starting_scores['Position'] = starting_scores['Current Score'].rank(method='min').astype(int)
     starting_scores = starting_scores.sort_values(by=['Position'])
+    # Prepend a T for any ties
+    starting_scores['Position'] = starting_scores['Position'].apply(lambda x: x if len(starting_scores[starting_scores['Position'] == x]) == 1 else 'T' + str(x))
     return starting_scores
 
 
@@ -376,4 +381,5 @@ if __name__ == "__main__":
     # print(difficulty)
     scores = get_scoreboard(eventID, division, int(round_num))
     partial_scores = get_partial_scoreboard(scores, int(hole))
-    print(davinci_json(partial_scores))
+    # print(davinci_json(partial_scores))
+    print(partial_scores)
