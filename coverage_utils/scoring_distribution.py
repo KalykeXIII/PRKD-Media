@@ -53,6 +53,8 @@ def get_div_text(lst, to=None, field=None):
             if to == 'int':
                 if lst[i].text == ' E ':
                     new_list.append(0)
+                elif lst[i].text == ' DNF ':
+                    new_list.append(999)
                 else:
                     new_list.append(int(lst[i].text))
             else:
@@ -63,7 +65,7 @@ def get_html_body(url):
     # Set up the Chrome driver options
     chrome_options = Options()
     chrome_options.add_argument('--headless')  # Run the browser in headless mode (without a GUI)
-    service = Service(executable_path=ChromeDriverManager().install())
+    service = Service(executable_path=ChromeDriverManager(version='114.0.5735.90').install())
     # Set up the Chrome driver service
     # Start the Chrome driver
     driver = webdriver.Chrome(service=service, options=chrome_options)
@@ -118,7 +120,12 @@ def get_scoreboard(eventID, division, round):
         # Goes in order of 1st to last player in sets of n holes
         player_scores = []
         for hole in range(holes_played):
-            player_scores.append(int(all_holes_scores[(player * holes_played) + hole].text))
+            # Deal with DNFs
+            if all_holes_scores[(player * holes_played) + hole].text == ' · ':
+                # Player DNFd
+                player_scores.append(0)
+            else:
+                player_scores.append(int(all_holes_scores[(player * holes_played) + hole].text))
         overall_scores.append(player_scores)
     # Get the names player-first-name player-last-name
     first_names = get_div_text(scores_contents.find_all("span", {"class": "player-first-name"}))
@@ -158,6 +165,8 @@ def get_scoreboard(eventID, division, round):
     leaderboard['Position'] = leaderboard['Total Score'].rank(method='min').astype(int)
     # Order the leaderboard by Position
     leaderboard = leaderboard.sort_values(by=['Position'])
+    # If there is a row with a total score of 999, remove the row
+    leaderboard = leaderboard[leaderboard['Total Score'] != 999]
     return leaderboard
 
 def get_partial_scoreboard(full_round_scoreboard, hole):
@@ -360,6 +369,36 @@ def davinci_json(leaderboard_object):
         leaderboard_json.append(player_row)
     return leaderboard_json
 
+def score_progression(players, scoreboard):
+    # Take a list of players as input and a whole scoreboard and calculate for each hole the player's hole score, new total score and new leaderboard position and return this in a list of len(number of holes in round)
+    # Work out how many holes there are
+    holes = len(scores.columns) - 5
+    # Result list
+    results = []
+    for i in range(holes):
+        players_hole = []
+        for player in players:
+            # Get the partial scoreboard
+            partial_scoreboard = get_partial_scoreboard(scoreboard, i)
+            # Get the relevant row for the player in question
+            player_row = partial_scoreboard[partial_scoreboard['Name'] == player]
+            player_score = player_row['Current Score'].values[0]
+            if player_score > 0:
+                player_score = '+' + str(player_score)
+            elif player_score == 0:
+                player_score = 'E'
+            # Also get the players hole score and add it: Birdie, Par, Bogey etc...
+            players_hole.append([player, player_score, player_row['Position'].values[0]])
+        results.append(players_hole)
+    return results
+
+def score_overlay_iterable(players, scoreboard, path):
+    # Provide a list of players and a scoreboard to get the scoring details
+    player_progression = score_progression(players, scoreboard) # This returns a list lists of length total number of holes. Each sublist has N sublists, where N is the number of players given
+    # Each sub-sub-list contains -> player-name, current score and placing
+    # And then provide a path to a file containing the exported markers from the Davinci Timeline that contains the tap-in order
+
+    return player_progression
 
 if __name__ == "__main__":
     eventID = sys.argv[1]
@@ -380,6 +419,13 @@ if __name__ == "__main__":
     # difficulty = hole_difficulty_rankings(overall_stats[-1])
     # print(difficulty)
     scores = get_scoreboard(eventID, division, int(round_num))
-    partial_scores = get_partial_scoreboard(scores, int(hole))
-    # print(davinci_json(partial_scores))
-    print(partial_scores)
+    # partial_scores = get_partial_scoreboard(scores, int(hole))
+    # json_string = str(davinci_json(partial_scores))
+    # json_string = json_string.replace('[', '{')
+    # json_string = json_string.replace(']', '}')
+    # print(json_string)
+    # print(partial_scores)
+    prog = score_progression(['Ryan Hart', 'Darren Stace-Smith', 'Tim Bohan', 'Aidan Howard'], scores)
+    for hole in prog:
+        print(hole)
+        print('\n')
