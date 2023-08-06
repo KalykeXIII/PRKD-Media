@@ -375,7 +375,7 @@ def score_progression(players, scoreboard):
     holes = len(scores.columns) - 5
     # Result list
     results = []
-    for i in range(holes):
+    for i in range(holes + 1):
         players_hole = []
         for player in players:
             # Get the partial scoreboard
@@ -426,6 +426,7 @@ if __name__ == "__main__":
     # print(json_string)
     # print(partial_scores)
     prog = score_progression(['Ryan Hart', 'Darren Stace-Smith', 'Tim Bohan', 'Aidan Howard'], scores)
-    for hole in prog:
-        print(hole)
+    for i in range(1, len(prog) + 1):
+        print('Hole ', i)
+        print(prog[i - 1])
         print('\n')
