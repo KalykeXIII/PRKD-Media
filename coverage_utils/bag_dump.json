@@ -1,0 +1,61 @@
+{
+    "tim-bohan": {
+        "name": "Tim Bohan",
+        "rating": 0,
+        "sponsors": ["Hyzer Flight"],
+        "distance_drivers": [
+            ["Taipan", "Ekka", "Orange"],
+            ["Destroyer", "Star", "Yellow"]
+        ],
+        "fairway_drivers": [
+            ["Teebird", "Champion", "Red"]
+        ],
+        "midranges": [
+            ["Justice", "Lucid", "Blue"]
+        ],
+        "putt_approach": [
+            ["Emac Judge", "Classic", "Grey"],
+            ["Zone", "Z", "Orange"]
+        ]
+    },
+    "ryan-hart": {
+
+    },
+    "ryan-michell": {
+
+    },
+    "austin-d-alessandro": {
+
+    },
+    "blake-houston": {
+
+    },
+    "dan-frost": {
+
+    },
+    "paul-phillips": {
+
+    },
+    "aidan-howard": {
+
+    },
+    "darren-stace-smith": {
+
+    },
+    "chris-ronalds": {
+
+    },
+    "leo-dykes": {
+        
+    },
+
+    "template": {
+        "name": "Template",
+        "rating": 0,
+        "sponsors": [],
+        "distance_drivers": [],
+        "fairway_drivers": [],
+        "midranges": [],
+        "putt_approach": []
+    }
+}
